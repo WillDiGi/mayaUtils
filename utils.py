@@ -8,14 +8,17 @@ def matchTrans(source, target):
     dummyConstraint = cmds.parentConstraint(source, target, mo=False)[0]
     cmds.delete(dummyConstraint)
 
-def insertOffset(target):
-    offsetGrp = cmds.createNode('transform', n=target+'_off')
-    matchTrans(target, offsetGrp)
-    parentNode = cmds.listRelatives(target, p=True)
-    if type(parentNode) != 'NoneType':
-        cmds.parent(offsetGrp, parentNode)
-    cmds.parent(target, offsetGrp)
-    return offsetGrp
+def insertGrp(node, extension, addon = False):
+    if addon:
+        grpNode = cmds.createNode('transform', n=node+'_'+extension)
+    else:
+        grpNode = cmds.createNode('transform', n=('_'.join(node.split('_')[:-1]+[extension])))
+    matchTrans(node, grpNode)
+    parentNode = cmds.listRelatives(node, p=True)
+    if parentNode != None:
+        cmds.parent(grpNode, parentNode)
+    cmds.parent(node, grpNode)
+    return grpNode
 
 def insertSDK(source, target):
     locGrp = cmds.createNode('transform', name=target+'_'+source+'_loc')
