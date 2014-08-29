@@ -5,7 +5,6 @@ weihe@willdigi.com
 '''
 
 import maya.cmds as cmds
-
 transform = ['tx','ty','tz','rx','ry','rz','sx','sy','sz']
 crvForm = {}
 crvForm['diamond'] = [[(0,0,0.18112),
