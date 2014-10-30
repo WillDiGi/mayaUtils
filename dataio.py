@@ -14,9 +14,16 @@
 #tempData=dataio.AttributeData()
 #tempData.ImportData()
 
+#Attributes export/import tools. 
+#2014.10.30.
+#weihe@willdigi.com
+
 import cPickle as pickle
 import maya.cmds as cmds
 import maya.mel as mel
+import tools.utils as utils
+import json
+reload(utils)
 
 class AttributeData(object):
     dataFileExtension = '.data'
@@ -29,17 +36,27 @@ class AttributeData(object):
         self.attrList = cmds.channelBox(cb, q=True, sma=True)
 
     def gatherData(self):
+        count = len(self.nodeList)
         if not self.nodeList:
             print 'Please select some nodes.'
             return
         elif not self.attrList:
-            print 'Please select some attributes in channel box.'
-            return
+            utils.progressStart('Exporting attributes from selection.', count)
+            for node in self.nodeList:
+                self.data[node] = {}
+                channelList = cmds.listAttr(node, k=True)
+                for attr in channelList:
+                    self.data[node][attr] = cmds.getAttr(node+'.'+attr)
+                utils.progressStep()
+            utils.progressEnd()
         else:
+            utils.progressStart('Exporting attributes from selection.', count)
             for node in self.nodeList:
                 self.data[node] = {}
                 for attr in self.attrList:
                     self.data[node][attr] = cmds.getAttr(node+'.'+attr)
+                utils.progressStep()
+            utils.progressEnd()
 
     def ExportData(self, filePath = None):
         """Exports the attribute data to disk.
@@ -56,9 +73,13 @@ class AttributeData(object):
             filePath += AttributeData.dataFileExtension
 
         self.gatherData()
-
         fh = open(filePath, 'wb')
-        pickle.dump(self.data, fh, pickle.HIGHEST_PROTOCOL)
+        
+        #pickle.dump(self.data, fh, pickle.HIGHEST_PROTOCOL)
+        #Old version, dump data with pickle.
+        data = json.dumps(self.data, sort_keys=True, indent=2)
+        fh.write(data)
+
         fh.close()
         print 'Exporting attribute data successed!'
 
@@ -71,20 +92,21 @@ class AttributeData(object):
             return
         if not isinstance(filePath, basestring):
             filePath = filePath[0]
-
+ 
         fh = open(filePath, 'rb')
-        data = pickle.load(fh)
+        data = json.loads(fh.read())
+        #data = pickle.load(fh)
+        #Old version, get data with pickle.
         fh.close()
-
         self.setData(data)
-
 
     def setData(self, data):
         """Apply the data to the nodes.
 
         @param data Data dictionary"""
         self.data = data
-
+        count=len(self.data.keys())
+        utils.progressStart('Exporting attributes from selection.', count)
         for key in self.data:
             node = key
             if cmds.objExists(node):
@@ -95,5 +117,5 @@ class AttributeData(object):
                         print (node + '.' + key + ' not exists.')
             else:
                 print ('%s not exist.' %node)
-                
-
+            utils.progressStep()
+        utils.progressEnd()
