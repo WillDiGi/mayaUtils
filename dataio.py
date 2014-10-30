@@ -1,19 +1,3 @@
-#Attributes export/import tools.
-#2014.08.29.
-#weihe@willdigi.com
-#
-#For exporting attributes, select objects and attributes:
-#import tools.dataio as dataio
-#reload(dataio)
-#tempData=dataio.AttributeData()
-#tempData.ExportData()
-#
-#For importing attributes:
-#import tools.dataio as dataio
-#reload(dataio)
-#tempData=dataio.AttributeData()
-#tempData.ImportData()
-
 #Attributes export/import tools. 
 #2014.10.30.
 #weihe@willdigi.com
