@@ -71,7 +71,7 @@ def importJntData():
   return data
 
 def createJntFromData(jntData, nameSpace='temp'):
-  for jnt in jointData:
+  for jnt in jntData:
     if jnt[0]==None:
       cmds.select(cl=True)
     else:
