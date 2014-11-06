@@ -128,7 +128,7 @@ def progressStep():
 def progressEnd():
     cmds.progressBar(gMainProgressBar, e=True, ep=True)
 
-def createCtrlPositionData():
+def getCrvData(crvList):
     '''
     This method finds all the ctrl objects in a scene, and creates a data set
     describing the positions of the cvs in world space. This data is used to
@@ -153,18 +153,43 @@ def createCtrlPositionData():
     
     '''
     data =[]
-    for control in cmds.ls('*.animCtrl', o=True):
-        shapes = cmds.listRelatives(control,  shapes=1, type='nurbsCurve')
+    for crv in crvList:
+        shapes = cmds.listRelatives(crv,  shapes=1, type='nurbsCurve')
         shapeData = {}
         for shape in shapes:
             pointData = []
             for i in range(cmds.getAttr('%s.controlPoints' % shape, size=1)):
                 pointData.append(cmds.pointPosition('%s.cv[%s]' % (shape, i), w=1))
             shapeData[shape] = pointData
-        data.append((control,shapeData))
+        data.append((crv,shapeData))
     return data
 
-def positionCtrls(ctrlData):
+def exportCrvData(data, filePath = None):
+    """Exports the curve data to disk.
+
+    @param filePath File path"""
+    dataFileExtension='.data'
+    if filePath == None:
+        startDir = cmds.workspace(q=True, rootDirectory=True)
+        filePath = cmds.fileDialog2(dialogStyle=2, fileMode=0, startingDirectory=startDir,
+                                    fileFilter='Data Files (*%s)' % dataFileExtension)
+    if not filePath:
+        return
+    filePath = filePath[0]
+    if not filePath.endswith(dataFileExtension):
+        filePath += dataFileExtension
+
+    fh = open(filePath, 'wb')
+    
+    #pickle.dump(self.data, fh, pickle.HIGHEST_PROTOCOL)
+    #Old version, dump data with pickle.
+    cData = json.dumps(data, sort_keys=True, indent=2)
+    fh.write(cData)
+
+    fh.close()
+    print 'Exporting attribute data successed!'
+
+def setCrvData(crvData):
     '''
     Positions the controls from the provided data. See createCtrlPositionData()
     for the format of said data
@@ -174,30 +199,53 @@ def positionCtrls(ctrlData):
             A list of ctrlData tuples
     '''
     notMatched = []
+    notExist = []
     currentCtrls = cmds.ls('*.animCtrl', o=True)
-    for data in ctrlData:
-        ctrl = data[0]
+    for data in crvData:
+        crv = data[0]
         shapeData = data[1]
-        numCtrls = len(cmds.ls(ctrl))
-        if numCtrls == 1:
-            shapes = shapeData.keys()
-            for shape in shapes:
-                numShapes = len(cmds.ls(shape))
-                if numShapes == 1:
-                    curNumPnts = cmds.getAttr('%s.controlPoints' % shape, size=1)
-                    oldNumPnts = len(shapeData[shape])
-                    if curNumPnts == oldNumPnts:
-                        for i, cv in enumerate(shapeData[shape]):
-                            cmds.xform('%s.cv[%s]' % (shape, i), ws=1, t=(cv[0], cv[1], cv[2]))
+        if cmds.objExists(crv):
+            numCrv = len(cmds.ls(crv))
+            if numCrv == 1:
+                shapes = shapeData.keys()
+                for shape in shapes:
+                    numShapes = len(cmds.ls(shape))
+                    if numShapes == 1:
+                        curCrvPts = cmds.getAttr('%s.controlPoints' % shape, size=1)
+                        oldCrvPts = len(shapeData[shape])
+                        if curCrvPts == oldCrvPts:
+                            for i, cv in enumerate(shapeData[shape]):
+                                cmds.xform('%s.cv[%s]' % (shape, i), ws=1, t=(cv[0], cv[1], cv[2]))
+                            print ('%s is restored.' % shape)
+                        else:
+                            notMatched.append(shape)
                     else:
                         notMatched.append(shape)
-                else:
-                    notMatched.append(shape)
+            else:
+                notMatched.append(crv)
         else:
-            notMatched.append(ctrl)
-        if ctrl in currentCtrls:
-            currentCtrls.remove(ctrl)
-    
-    #report back
+            notExist.append(crv)
+    if notExist:
+        for obj in notExist:
+            print ('%s not exists.' %obj)
     if notMatched:
-        cmds.warning("Couldn't match the following:\n%s" % '\n'.join(notMatched))
+        for obj in notMatched:
+            print ('%s is not match.' %obj)
+
+def importCrvData(filePath = None):
+    dataFileExtension = '.data'
+    if filePath == None:
+        startDir = cmds.workspace(q=True, rootDirectory=True)
+        filePath = cmds.fileDialog2(dialogStyle=2, fileMode=1, startingDirectory=startDir,
+                                    fileFilter='Data Files (*%s)' % dataFileExtension)
+    if not filePath:
+        return
+    if not isinstance(filePath, basestring):
+        filePath = filePath[0]
+
+    fh = open(filePath, 'rb')
+    data = json.loads(fh.read())
+    #data = pickle.load(fh)
+    #Old version, get data with pickle.
+    fh.close()
+    return data
