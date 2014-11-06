@@ -22,6 +22,8 @@ import maya.OpenMayaUI as OpenMayaUI
 import maya.OpenMayaAnim as OpenMayaAnim
 import logging
 logging.basicConfig(format='%(levelname)s: %(message)s')
+import utils.utils as utils
+reload(utils)
 
 def getShape(node, intermediate=False):
     """Gets the shape from the specified node.

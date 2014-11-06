@@ -4,6 +4,7 @@
 
 import maya.cmds as cmds
 import maya.mel as mel
+import json
 
 gMainProgressBar = mel.eval('$tmp = $gMainProgressBar')
 
@@ -127,6 +128,42 @@ def progressStep():
     
 def progressEnd():
     cmds.progressBar(gMainProgressBar, e=True, ep=True)
+
+def exportData(data, dataFileExtension = '.data', filePath = None):
+    """Exports data to disk.
+    @param dataFileExtension File extension
+    @param filePath File path"""
+    if filePath == None:
+        startDir = cmds.workspace(q=True, rootDirectory=True)
+        filePath = cmds.fileDialog2(dialogStyle=2, fileMode=0, startingDirectory=startDir,
+                                    fileFilter='Data Files (*%s)' % dataFileExtension)
+    if not filePath:
+        return
+    filePath = filePath[0]
+    if not filePath.endswith(dataFileExtension):
+        filePath += dataFileExtension
+    fh = open(filePath, 'wb')
+    dictData = json.dumps(data, sort_keys=True, indent=2)
+    fh.write(dictData)
+    fh.close()
+    print 'Export data successfully!'
+
+def importData(dataFileExtension = '.data', filePath = None):
+    """Imports data from disk.
+    @param dataFileExtension File extension
+    @param filePath File path"""
+    if filePath == None:
+        startDir = cmds.workspace(q=True, rootDirectory=True)
+        filePath = cmds.fileDialog2(dialogStyle=2, fileMode=1, startingDirectory=startDir,
+                                    fileFilter='Data Files (*%s)' % dataFileExtension)
+    if not filePath:
+        return
+    if not isinstance(filePath, basestring):
+        filePath = filePath[0]
+    fh = open(filePath, 'rb')
+    data = json.loads(fh.read())
+    fh.close()
+    return data
 
 def getCrvData(crvList):
     '''
