@@ -127,3 +127,77 @@ def progressStep():
     
 def progressEnd():
     cmds.progressBar(gMainProgressBar, e=True, ep=True)
+
+def createCtrlPositionData():
+    '''
+    This method finds all the ctrl objects in a scene, and creates a data set
+    describing the positions of the cvs in world space. This data is used to
+    reposition the controls after the rig is built.
+    
+    This is the format of the data:
+    
+    data = [('ctrlA':['ctrlAShape':[[point1.X, point1.Y, point1.Z],
+                                    [point2.X, point2.Y, point2.Z],
+                                    etc...]]),
+            ('ctrlB':['ctrlBShape':[[point1.X, point1.Y, point1.Z],
+                                    [point2.X, point2.Y, point2.Z],
+                                     etc...],
+                      'ctrlBShape1':[point1.X, point1.Y, point1.Z]]),   
+           ]
+    
+    :Returns:
+        A list of ctrlData tuples
+        
+    :Rtype:
+        `list`
+    
+    '''
+    data =[]
+    for control in cmds.ls('*.animCtrl', o=True):
+        shapes = cmds.listRelatives(control,  shapes=1, type='nurbsCurve')
+        shapeData = {}
+        for shape in shapes:
+            pointData = []
+            for i in range(cmds.getAttr('%s.controlPoints' % shape, size=1)):
+                pointData.append(cmds.pointPosition('%s.cv[%s]' % (shape, i), w=1))
+            shapeData[shape] = pointData
+        data.append((control,shapeData))
+    return data
+
+def positionCtrls(ctrlData):
+    '''
+    Positions the controls from the provided data. See createCtrlPositionData()
+    for the format of said data
+    
+    :Parameters:
+        ctrlData : `list`
+            A list of ctrlData tuples
+    '''
+    notMatched = []
+    currentCtrls = cmds.ls('*.animCtrl', o=True)
+    for data in ctrlData:
+        ctrl = data[0]
+        shapeData = data[1]
+        numCtrls = len(cmds.ls(ctrl))
+        if numCtrls == 1:
+            shapes = shapeData.keys()
+            for shape in shapes:
+                numShapes = len(cmds.ls(shape))
+                if numShapes == 1:
+                    curNumPnts = cmds.getAttr('%s.controlPoints' % shape, size=1)
+                    oldNumPnts = len(shapeData[shape])
+                    if curNumPnts == oldNumPnts:
+                        for i, cv in enumerate(shapeData[shape]):
+                            cmds.xform('%s.cv[%s]' % (shape, i), ws=1, t=(cv[0], cv[1], cv[2]))
+                    else:
+                        notMatched.append(shape)
+                else:
+                    notMatched.append(shape)
+        else:
+            notMatched.append(ctrl)
+        if ctrl in currentCtrls:
+            currentCtrls.remove(ctrl)
+    
+    #report back
+    if notMatched:
+        cmds.warning("Couldn't match the following:\n%s" % '\n'.join(notMatched))
