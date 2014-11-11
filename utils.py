@@ -1,5 +1,5 @@
 # Rigging Utilits.
-#2014.10.30.
+#2014.11.11.
 #weihe@willdigi.com
 
 import maya.cmds as cmds
